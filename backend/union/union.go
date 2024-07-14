@@ -532,6 +532,7 @@ func multiReader(n int, in io.Reader) ([]io.Reader, <-chan error) {
 
 func (f *Fs) put(ctx context.Context, in io.Reader, src fs.ObjectInfo, stream bool, options ...fs.OpenOption) (fs.Object, error) {
 	srcPath := src.Remote()
+	ctx = context.WithValue(ctx, "fileSize", src.Size())
 	upstreams, err := f.create(ctx, srcPath)
 	if err == fs.ErrorObjectNotFound {
 		upstreams, err = f.mkdir(ctx, parentDir(srcPath))

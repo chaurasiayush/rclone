@@ -36,6 +36,7 @@ See the following for detailed instructions for
   * [Chunker](/chunker/) - transparently splits large files for other remotes
   * [Citrix ShareFile](/sharefile/)
   * [Compress](/compress/)
+  * [Cloudinary](/cloudinary/)
   * [Combine](/combine/)
   * [Crypt](/crypt/) - to encrypt other remotes
   * [DigitalOcean Spaces](/s3/#digitalocean-spaces)
@@ -53,6 +54,7 @@ See the following for detailed instructions for
   * [Hetzner Storage Box](/sftp/#hetzner-storage-box)
   * [HiDrive](/hidrive/)
   * [HTTP](/http/)
+  * [iCloud Drive](/iclouddrive/)
   * [Internet Archive](/internetarchive/)
   * [Jottacloud](/jottacloud/)
   * [Koofr](/koofr/)
@@ -616,6 +618,11 @@ it to `false`.  It is also possible to specify `--boolean=false` or
 `--boolean=true`.  Note that `--boolean false` is not valid - this is
 parsed as `--boolean` and the `false` is parsed as an extra command
 line argument for rclone.
+
+Options documented to take a `stringArray` parameter accept multiple 
+values. To pass more than one value, repeat the option; for example: 
+`--include value1 --include value2`.
+
 
 ### Time or duration options {#time-option}
 
@@ -1424,6 +1431,22 @@ The options mean
 ### --leave-root ####
 
 During rmdirs it will not remove root directory, even if it's empty.
+
+### --links / -l
+
+Normally rclone will ignore symlinks or junction points (which behave
+like symlinks under Windows).
+
+If you supply this flag then rclone will copy symbolic links from any
+supported backend backend, and store them as text files, with a
+`.rclonelink` suffix in the destination.
+
+The text file will contain the target of the symbolic link.
+
+The `--links` / `-l` flag enables this feature for all supported
+backends and the VFS. There are individual flags for just enabling it
+for the VFS `--vfs-links` and the local backend `--local-links` if
+required.
 
 ### --log-file=FILE ###
 
@@ -2868,9 +2891,9 @@ messages may not be valid after the retry. If rclone has done a retry
 it will log a high priority message if the retry was successful.
 
 ### List of exit codes ###
-  * `0` - success
-  * `1` - Syntax or usage error
-  * `2` - Error not otherwise categorised
+  * `0` - Success
+  * `1` - Error not otherwise categorised
+  * `2` - Syntax or usage error
   * `3` - Directory not found
   * `4` - File not found
   * `5` - Temporary error (one that more retries might fix) (Retry errors)
@@ -2910,6 +2933,22 @@ The same parser is used for the options and the environment variables
 so they take exactly the same form.
 
 The options set by environment variables can be seen with the `-vv` flag, e.g. `rclone version -vv`.
+
+Options that can appear multiple times (type `stringArray`) are
+treated slightly differently as environment variables can only be
+defined once. In order to allow a simple mechanism for adding one or
+many items, the input is treated as a [CSV encoded](https://godoc.org/encoding/csv)
+string. For example
+
+| Environment Variable | Equivalent options |
+|----------------------|--------------------|
+| `RCLONE_EXCLUDE="*.jpg"` | `--exclude "*.jpg"` |
+| `RCLONE_EXCLUDE="*.jpg,*.png"` | `--exclude "*.jpg"` `--exclude "*.png"` |
+| `RCLONE_EXCLUDE='"*.jpg","*.png"'` | `--exclude "*.jpg"` `--exclude "*.png"` |
+| `RCLONE_EXCLUDE='"/directory with comma , in it /**"'` | `--exclude "/directory with comma , in it /**" |
+
+If `stringArray` options are defined as environment variables **and**
+options on the command line then all the values will be used.
 
 ### Config file ###
 

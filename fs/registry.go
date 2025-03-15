@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -195,8 +196,8 @@ type Option struct {
 	Help       string           // help, start with a single sentence on a single line that will be extracted for command line help
 	Groups     string           `json:",omitempty"` // groups this option belongs to - comma separated string for options classification
 	Provider   string           `json:",omitempty"` // set to filter on provider
-	Default    interface{}      // default value, nil => "", if set (and not to nil or "") then Required does nothing
-	Value      interface{}      // value to be set by flags
+	Default    any              // default value, nil => "", if set (and not to nil or "") then Required does nothing
+	Value      any              // value to be set by flags
 	Examples   OptionExamples   `json:",omitempty"` // predefined values that can be selected from list (multiple-choice option)
 	ShortOpt   string           `json:",omitempty"` // the short option for this if required
 	Hide       OptionVisibility // set this to hide the config from the configurator or the command line
@@ -232,7 +233,7 @@ func (o *Option) MarshalJSON() ([]byte, error) {
 }
 
 // GetValue gets the current value which is the default if not set
-func (o *Option) GetValue() interface{} {
+func (o *Option) GetValue() any {
 	val := o.Value
 	if val == nil {
 		val = o.Default
@@ -264,14 +265,9 @@ func (o *Option) String() string {
 		if len(stringArray) == 0 {
 			return ""
 		}
-		// Encode string arrays as JSON
+		// Encode string arrays as CSV
 		// The default Go encoding can't be decoded uniquely
-		buf, err := json.Marshal(stringArray)
-		if err != nil {
-			Errorf(nil, "Can't encode default value for %q key - ignoring: %v", o.Name, err)
-			return "[]"
-		}
-		return string(buf)
+		return CommaSepList(stringArray).String()
 	}
 	return fmt.Sprint(v)
 }
@@ -378,7 +374,7 @@ func Register(info *RegInfo) {
 		aliasInfo.Name = alias
 		aliasInfo.Prefix = alias
 		aliasInfo.Hide = true
-		aliasInfo.Options = append(Options(nil), info.Options...)
+		aliasInfo.Options = slices.Clone(info.Options)
 		for i := range aliasInfo.Options {
 			aliasInfo.Options[i].Hide = OptionHideBoth
 		}
@@ -415,7 +411,7 @@ func MustFind(name string) *RegInfo {
 // OptionsInfo holds info about an block of options
 type OptionsInfo struct {
 	Name    string                      // name of this options block for the rc
-	Opt     interface{}                 // pointer to a struct to set the options in
+	Opt     any                         // pointer to a struct to set the options in
 	Options Options                     // description of the options
 	Reload  func(context.Context) error // if not nil, call when options changed and on init
 }
@@ -531,7 +527,22 @@ func (oi *OptionsInfo) load() error {
 // their values read from the options, environment variables and
 // command line parameters.
 func GlobalOptionsInit() error {
-	for _, opt := range OptionsRegistry {
+	var keys []string
+	for key := range OptionsRegistry {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		// Sort alphabetically, but with "main" first
+		if keys[i] == "main" {
+			return true
+		}
+		if keys[j] == "main" {
+			return false
+		}
+		return keys[i] < keys[j]
+	})
+	for _, key := range keys {
+		opt := OptionsRegistry[key]
 		err := opt.load()
 		if err != nil {
 			return err

@@ -154,7 +154,7 @@ func (m *March) Run(ctx context.Context) error {
 	var traversing sync.WaitGroup // running directory traversals
 	checkers := ci.Checkers
 	in := make(chan listDirJob, checkers)
-	for i := 0; i < checkers; i++ {
+	for range checkers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -415,7 +415,7 @@ func (m *March) processJob(job listDirJob) ([]listDirJob, error) {
 		} else {
 			fs.Errorf(m.Fsrc, "error reading source root directory: %v", srcListErr)
 		}
-		srcListErr = fs.CountError(srcListErr)
+		srcListErr = fs.CountError(m.Ctx, srcListErr)
 		return nil, srcListErr
 	}
 	if dstListErr == fs.ErrorDirNotFound {
@@ -426,7 +426,7 @@ func (m *March) processJob(job listDirJob) ([]listDirJob, error) {
 		} else {
 			fs.Errorf(m.Fdst, "error reading destination root directory: %v", dstListErr)
 		}
-		dstListErr = fs.CountError(dstListErr)
+		dstListErr = fs.CountError(m.Ctx, dstListErr)
 		return nil, dstListErr
 	}
 

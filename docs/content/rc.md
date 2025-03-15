@@ -18,29 +18,31 @@ If you just want to run a remote control then see the [rcd](/commands/rclone_rcd
 
 ### --rc
 
-Flag to start the http server listen on remote requests
+Flag to start the http server listen on remote requests.
       
 ### --rc-addr=IP
 
-IPaddress:Port or :Port to bind server to. (default "localhost:5572")
+IPaddress:Port or :Port to bind server to. (default "localhost:5572").
 
 ### --rc-cert=KEY
-SSL PEM key (concatenation of certificate and CA certificate)
+
+SSL PEM key (concatenation of certificate and CA certificate).
 
 ### --rc-client-ca=PATH
-Client certificate authority to verify clients with
+
+Client certificate authority to verify clients with.
 
 ### --rc-htpasswd=PATH
 
-htpasswd file - if not provided no authentication is done
+htpasswd file - if not provided no authentication is done.
 
 ### --rc-key=PATH
 
-SSL PEM Private key
+TLS PEM private key file.
 
 ### --rc-max-header-bytes=VALUE
 
-Maximum size of request header (default 4096)
+Maximum size of request header (default 4096).
 
 ### --rc-min-tls-version=VALUE
 
@@ -57,15 +59,15 @@ Password for authentication.
 
 ### --rc-realm=VALUE
 
-Realm for authentication (default "rclone")
+Realm for authentication (default "rclone").
 
 ### --rc-server-read-timeout=DURATION
 
-Timeout for server reading data (default 1h0m0s)
+Timeout for server reading data (default 1h0m0s).
 
 ### --rc-server-write-timeout=DURATION
 
-Timeout for server writing data (default 1h0m0s)
+Timeout for server writing data (default 1h0m0s).
 
 ### --rc-serve
 
@@ -178,7 +180,7 @@ User-specified template.
 Rclone itself implements the remote control protocol in its `rclone
 rc` command.
 
-You can use it like this
+You can use it like this:
 
 ```
 $ rclone rc rc/noop param1=one param2=two
@@ -188,8 +190,23 @@ $ rclone rc rc/noop param1=one param2=two
 }
 ```
 
-Run `rclone rc` on its own to see the help for the installed remote
-control commands.
+If the remote is running on a different URL than the default
+`http://localhost:5572/`, use the `--url` option to specify it:
+
+```
+$ rclone rc --url http://some.remote:1234/ rc/noop
+```
+
+Or, if the remote is listening on a Unix socket, use the `--unix-socket` option
+instead:
+
+```
+$ rclone rc --unix-socket /tmp/rclone.sock rc/noop
+```
+
+Run `rclone rc` on its own, without any commands, to see the help for the
+installed remote control commands. Note that this also needs to connect to the
+remote server.
 
 ## JSON input
 
@@ -1716,6 +1733,11 @@ Returns:
 Returns an object where keys are option block names and values are an
 object with the current option values in.
 
+Parameters:
+
+- blocks: optional string of comma separated blocks to include
+    - all are included if this is missing or ""
+
 Note that these are the global options which are unaffected by use of
 the _config and _filter parameters. If you wish to read the parameters
 set in _config then use options/config and for _filter use options/filter.
@@ -1727,6 +1749,11 @@ map to the external options very easily with a few exceptions.
 
 Returns an object where keys are option block names and values are an
 array of objects with info about each options.
+
+Parameters:
+
+- blocks: optional string of comma separated blocks to include
+    - all are included if this is missing or ""
 
 These objects are in the same format as returned by "config/providers". They are
 described in the [option blocks](#option-blocks) section.
@@ -2013,6 +2040,74 @@ not reached.
 If poll-interval is updated or disabled temporarily, some changes
 might not get picked up by the polling function, depending on the
 used remote.
+ 
+This command takes an "fs" parameter. If this parameter is not
+supplied and if there is only one VFS in use then that VFS will be
+used. If there is more than one VFS in use then the "fs" parameter
+must be supplied.
+
+### vfs/queue: Queue info for a VFS. {#vfs-queue}
+
+This returns info about the upload queue for the selected VFS.
+
+This is only useful if `--vfs-cache-mode` > off. If you call it when
+the `--vfs-cache-mode` is off, it will return an empty result.
+
+    {
+        "queued": // an array of files queued for upload
+        [
+            {
+                "name":      "file",   // string: name (full path) of the file,
+                "id":        123,      // integer: id of this item in the queue,
+                "size":      79,       // integer: size of the file in bytes
+                "expiry":    1.5       // float: time until file is eligible for transfer, lowest goes first
+                "tries":     1,        // integer: number of times we have tried to upload
+                "delay":     5.0,      // float: seconds between upload attempts
+                "uploading": false,    // boolean: true if item is being uploaded
+            },
+       ],
+    }
+
+The `expiry` time is the time until the file is eligible for being
+uploaded in floating point seconds. This may go negative. As rclone
+only transfers `--transfers` files at once, only the lowest
+`--transfers` expiry times will have `uploading` as `true`. So there
+may be files with negative expiry times for which `uploading` is
+`false`.
+
+ 
+This command takes an "fs" parameter. If this parameter is not
+supplied and if there is only one VFS in use then that VFS will be
+used. If there is more than one VFS in use then the "fs" parameter
+must be supplied.
+
+### vfs/queue-set-expiry: Set the expiry time for an item queued for upload. {#vfs-queue-set-expiry}
+
+Use this to adjust the `expiry` time for an item in the upload queue.
+You will need to read the `id` of the item using `vfs/queue` before
+using this call.
+
+You can then set `expiry` to a floating point number of seconds from
+now when the item is eligible for upload. If you want the item to be
+uploaded as soon as possible then set it to a large negative number (eg
+-1000000000). If you want the upload of the item to be delayed
+for a long time then set it to a large positive number.
+
+Setting the `expiry` of an item which has already has started uploading
+will have no effect - the item will carry on being uploaded.
+
+This will return an error if called with `--vfs-cache-mode` off or if
+the `id` passed is not found.
+
+This takes the following parameters
+
+- `fs` - select the VFS in use (optional)
+- `id` - a numeric ID as returned from `vfs/queue`
+- `expiry` - a new expiry time as floating point seconds
+- `relative` - if set, expiry is to be treated as relative to the current expiry (optional, boolean)
+
+This returns an empty result on success, or an error.
+
  
 This command takes an "fs" parameter. If this parameter is not
 supplied and if there is only one VFS in use then that VFS will be

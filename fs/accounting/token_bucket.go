@@ -41,7 +41,12 @@ type tokenBucket struct {
 //
 // Call with lock held
 func (bs *buckets) _isOff() bool { //nolint:unused // Don't include unused when running golangci-lint in case its on windows where this is not called
-	return bs[0] == nil
+	for i := range bs {
+		if bs[i] != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // Disable the limits
@@ -60,10 +65,7 @@ func newEmptyTokenBucket(bandwidth fs.SizeSuffix) *rate.Limiter {
 	// Relate maxBurstSize to bandwidth limit
 	// 4M gives 2.5 Gb/s on Windows
 	// Use defaultMaxBurstSize up to 2GBit/s (256MiB/s) then scale
-	maxBurstSize := (bandwidth * defaultMaxBurstSize) / (256 * 1024 * 1024)
-	if maxBurstSize < defaultMaxBurstSize {
-		maxBurstSize = defaultMaxBurstSize
-	}
+	maxBurstSize := max((bandwidth*defaultMaxBurstSize)/(256*1024*1024), defaultMaxBurstSize)
 	// fs.Debugf(nil, "bandwidth=%v maxBurstSize=%v", bandwidth, maxBurstSize)
 	tb := rate.NewLimiter(rate.Limit(bandwidth), int(maxBurstSize))
 	if tb != nil {

@@ -2,7 +2,7 @@
 package configstruct
 
 import (
-	"encoding/json"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"reflect"
@@ -31,11 +31,11 @@ func camelToSnake(in string) string {
 //
 // Builtin types are expected to be encoding as their natural
 // stringificatons as produced by fmt.Sprint except for []string which
-// is expected to be encoded as JSON with empty array encoded as "".
+// is expected to be encoded a a CSV with empty array encoded as "".
 //
 // Any other types are expected to be encoded by their String()
 // methods and decoded by their `Set(s string) error` methods.
-func StringToInterface(def interface{}, in string) (newValue interface{}, err error) {
+func StringToInterface(def any, in string) (newValue any, err error) {
 	typ := reflect.TypeOf(def)
 	o := reflect.New(typ)
 	switch def.(type) {
@@ -58,14 +58,18 @@ func StringToInterface(def interface{}, in string) (newValue interface{}, err er
 	case time.Duration:
 		newValue, err = time.ParseDuration(in)
 	case []string:
-		// JSON decode arrays of strings
-		if in != "" {
-			var out []string
-			err = json.Unmarshal([]byte(in), &out)
-			newValue = out
-		} else {
-			// Empty string we will treat as empty array
+		// CSV decode arrays of strings - ideally we would use
+		// fs.CommaSepList here but we can't as it would cause
+		// a circular import.
+		if len(in) == 0 {
 			newValue = []string{}
+		} else {
+			r := csv.NewReader(strings.NewReader(in))
+			newValue, err = r.Read()
+			switch _err := err.(type) {
+			case *csv.ParseError:
+				err = _err.Err // remove line numbers from the error message
+			}
 		}
 	default:
 		// Try using a Set method
@@ -84,10 +88,10 @@ func StringToInterface(def interface{}, in string) (newValue interface{}, err er
 
 // Item describes a single entry in the options structure
 type Item struct {
-	Name  string            // snake_case
-	Field string            // CamelCase
-	Set   func(interface{}) // set this field
-	Value interface{}
+	Name  string    // snake_case
+	Field string    // CamelCase
+	Set   func(any) // set this field
+	Value any
 }
 
 // Items parses the opt struct and returns a slice of Item objects.
@@ -101,7 +105,7 @@ type Item struct {
 // Nested structs are looked up too. If the parent struct has a struct
 // tag, this will be used as a prefix for the values in the sub
 // struct, otherwise they will be embedded as they are.
-func Items(opt interface{}) (items []Item, err error) {
+func Items(opt any) (items []Item, err error) {
 	def := reflect.ValueOf(opt)
 	if def.Kind() != reflect.Ptr {
 		return nil, errors.New("argument must be a pointer")
@@ -111,7 +115,7 @@ func Items(opt interface{}) (items []Item, err error) {
 		return nil, errors.New("argument must be a pointer to a struct")
 	}
 	defType := def.Type()
-	for i := 0; i < def.NumField(); i++ {
+	for i := range def.NumField() {
 		field := def.Field(i)
 		fieldType := defType.Field(i)
 		fieldName := fieldType.Name
@@ -141,7 +145,7 @@ func Items(opt interface{}) (items []Item, err error) {
 			defaultItem := Item{
 				Name:  configName,
 				Field: fieldName,
-				Set: func(newValue interface{}) {
+				Set: func(newValue any) {
 					field.Set(reflect.ValueOf(newValue))
 				},
 				Value: field.Interface(),
@@ -165,7 +169,7 @@ func Items(opt interface{}) (items []Item, err error) {
 // types and set in opt.
 //
 // All the field types in the struct must implement fmt.Scanner.
-func Set(config configmap.Getter, opt interface{}) (err error) {
+func Set(config configmap.Getter, opt any) (err error) {
 	defaultItems, err := Items(opt)
 	if err != nil {
 		return err
@@ -173,7 +177,7 @@ func Set(config configmap.Getter, opt interface{}) (err error) {
 	for _, defaultItem := range defaultItems {
 		newValue := defaultItem.Value
 		if configValue, ok := config.Get(defaultItem.Name); ok {
-			var newNewValue interface{}
+			var newNewValue any
 			newNewValue, err = StringToInterface(newValue, configValue)
 			if err != nil {
 				// Mask errors if setting an empty string as

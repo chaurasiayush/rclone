@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,7 +22,6 @@ import (
 	"github.com/rclone/rclone/fs/filter"
 	"github.com/rclone/rclone/fs/hash"
 	"github.com/rclone/rclone/fs/operations"
-	"golang.org/x/exp/slices"
 )
 
 // ListingHeader defines first line of a listing
@@ -394,7 +394,7 @@ func parseHash(str string) (string, string, error) {
 	return "", "", fmt.Errorf("invalid hash %q", str)
 }
 
-// checkListing verifies that listing is not empty (unless resynching)
+// checkListing verifies that listing is not empty (unless resyncing)
 func (b *bisyncRun) checkListing(ls *fileList, listing, msg string) error {
 	if b.opt.Resync || !ls.empty() {
 		return nil

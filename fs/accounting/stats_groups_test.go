@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rclone/rclone/fs"
+	"github.com/rclone/rclone/fs/fserrors"
 	"github.com/rclone/rclone/fs/rc"
 	"github.com/rclone/rclone/fstest/testy"
 	"github.com/stretchr/testify/assert"
@@ -102,11 +104,11 @@ func TestStatsGroupOperations(t *testing.T) {
 		runtime.GC()
 		runtime.ReadMemStats(&start)
 
-		for i := 0; i < count; i++ {
+		for i := range count {
 			sg.set(ctx, fmt.Sprintf("test-%d", i), NewStats(ctx))
 		}
 
-		for i := 0; i < count; i++ {
+		for i := range count {
 			sg.delete(fmt.Sprintf("test-%d", i))
 		}
 
@@ -122,7 +124,7 @@ func TestStatsGroupOperations(t *testing.T) {
 
 	testGroupStatsInfo := NewStatsGroup(ctx, "test-group")
 	require.NoError(t, testGroupStatsInfo.DeleteFile(ctx, 0))
-	for i := 0; i < 41; i++ {
+	for range 41 {
 		require.NoError(t, GlobalStats().DeleteFile(ctx, 0))
 	}
 
@@ -206,6 +208,43 @@ func TestStatsGroupOperations(t *testing.T) {
 	})
 }
 
+func TestCountError(t *testing.T) {
+	ctx := context.Background()
+	Start(ctx)
+	defer func() {
+		groups = newStatsGroups()
+	}()
+	t.Run("global stats", func(t *testing.T) {
+		GlobalStats().ResetCounters()
+		err := fs.CountError(ctx, fmt.Errorf("global err"))
+		assert.Equal(t, int64(1), GlobalStats().errors)
+
+		assert.True(t, fserrors.IsCounted(err))
+	})
+	t.Run("group stats", func(t *testing.T) {
+		statGroupName := fmt.Sprintf("%s-error_group", t.Name())
+		GlobalStats().ResetCounters()
+		stCtx := WithStatsGroup(ctx, statGroupName)
+		st := StatsGroup(stCtx, statGroupName)
+
+		err := fs.CountError(stCtx, fmt.Errorf("group err"))
+
+		assert.Equal(t, int64(0), GlobalStats().errors)
+		assert.Equal(t, int64(1), st.errors)
+		assert.True(t, fserrors.IsCounted(err))
+	})
+
+}
+
 func percentDiff(start, end uint64) uint64 {
-	return (start - end) * 100 / start
+	if start == 0 {
+		return 0 // Handle zero start value to avoid division by zero
+	}
+	var diff uint64
+	if end > start {
+		diff = end - start // Handle case where end is larger than start
+	} else {
+		diff = start - end
+	}
+	return (diff * 100) / start
 }

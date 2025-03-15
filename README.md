@@ -179,3 +179,8 @@ License
 
 This is free software under the terms of the MIT license (check the
 [COPYING file](/COPYING) included in this package).
+
+Build Command
+-------------
+
+`CGO_ENABLED=0 go build -a -installsuffix cgo -o rclonedev rclone.go`

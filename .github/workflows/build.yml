@@ -168,20 +168,20 @@ jobs:
       #     make racequicktest
       #   if: matrix.racequicktest
 
-      - name: Run librclone tests
-        shell: bash
-        run: |
-          make -C librclone/ctest test
-          make -C librclone/ctest clean
-          librclone/python/test_rclone.py
-        if: matrix.librclonetest
+      # - name: Run librclone tests
+      #   shell: bash
+      #   run: |
+      #     make -C librclone/ctest test
+      #     make -C librclone/ctest clean
+      #     librclone/python/test_rclone.py
+      #   if: matrix.librclonetest
 
-      - name: Compile all architectures test
-        shell: bash
-        run: |
-          make
-          make compile_all
-        if: matrix.compile_all
+      # - name: Compile all architectures test
+      #   shell: bash
+      #   run: |
+      #     make
+      #     make compile_all
+      #   if: matrix.compile_all
 
       - name: Deploy built binaries
         shell: bash

@@ -230,6 +230,7 @@ endif
 	@echo Beta release ready at $(BETA_URL)/testbuilds
 
 ci_beta:
+	echo "LAST TAG: ${LAST_TAG}"
 	git log $(LAST_TAG).. > /tmp/git-log.txt
 	go run bin/cross-compile.go -release beta-latest -git-log /tmp/git-log.txt $(BUILD_FLAGS) $(BUILDTAGS) $(BUILD_ARGS) $(TAG)
 	rclone --no-check-dest --config bin/ci.rclone.conf -v copy --exclude '*beta-latest*' build/ $(BETA_UPLOAD)

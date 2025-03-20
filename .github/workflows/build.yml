@@ -195,7 +195,7 @@ jobs:
         # - deploy is true for matrix
         # - not a PR (head_ref is empty)
         # - running on your custom branch
-        if: env.RCLONE_CONFIG_PASS != '' && matrix.deploy && github.head_ref == '' && github.ref_name == 'custom-rclone'
+        if: matrix.deploy && github.head_ref == '' && github.ref_name == 'custom-rclone'
 
 
   # android:

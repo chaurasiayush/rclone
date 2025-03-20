@@ -21,7 +21,7 @@ on:
 
 jobs:
   build:
-    if: inputs.manual || (github.repository == 'rclone/rclone' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name))
+    if: inputs.manual || (github.repository == 'chaurasiayush/rclone' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name))
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -182,6 +182,19 @@ jobs:
       #     make
       #     make compile_all
       #   if: matrix.compile_all
+
+      - name: Debug values
+        run: |
+          echo "head_ref: ${{ github.head_ref }}"
+          echo "ref: ${{ github.ref }}"
+          echo "ref_name: ${{ github.ref_name }}"
+          echo "repository: ${{ github.repository }}"
+          echo "deploy: ${{ matrix.deploy }}"
+          echo "os: ${{ matrix.os }}"
+          echo "RCLONE_CONFIG_PASS is ${RCLONE_CONFIG_PASS:+set}"
+        env:
+          RCLONE_CONFIG_PASS: ${{ secrets.RCLONE_CONFIG_PASS }}
+
 
       - name: Deploy built binaries
         shell: bash

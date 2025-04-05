@@ -81,7 +81,7 @@ require (
 	go.etcd.io/bbolt v1.4.0
 	goftp.io/server/v2 v2.0.1
 	golang.org/x/crypto v0.35.0
-	golang.org/x/net v0.35.0
+	golang.org/x/net v0.36.0
 	golang.org/x/oauth2 v0.27.0
 	golang.org/x/sync v0.11.0
 	golang.org/x/sys v0.30.0
@@ -239,7 +239,7 @@ require (
 	github.com/IBM/go-sdk-core/v5 v5.18.5
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v1.1.5
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/pkg/xattr v0.4.10
 	golang.org/x/mobile v0.0.0-20250218173827-cd096645fcd3
 	golang.org/x/term v0.29.0

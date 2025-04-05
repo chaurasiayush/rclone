@@ -68,8 +68,11 @@ name: Build and Release Rclone
 
 on:
   push:
-    branches:
-      - "releases/custom-rclone"
+    # branches:
+    #   - "releases/custom-rclone"
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
   pull_request:
     branches:
       - "releases/custom-rclone"
